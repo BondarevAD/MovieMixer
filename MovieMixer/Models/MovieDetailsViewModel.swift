@@ -6,19 +6,37 @@
 //
 
 import Foundation
-import SwiftUI
+import Combine
+import CoreData
 
 @MainActor
 class MovieDetailsViewModel: ObservableObject {
 
+
+    
+
     @Published var credits: MovieCredits?
     @Published var cast: [MovieCredits.Cast] = []
-    @Published var castProfiles: [CastProfile] = []
+    @Published var castProfiles: [Person] = []
     @Published var details: MovieDetails?
+    @Published var personDetails: Person?
     @Published var isLoading: Bool = false
+    
+    
+    @Published var language: String = "ru"
+    
+    
+
+    @Published var isFavourite: Bool = false
+
+
+
+    func getLanguage(language: Language) {
+        self.language = language.language.rawValue
+    }
 
     func movieCredits(for movieID: Int) async {
-        let url = URL(string: "https://api.themoviedb.org/3/movie/\(movieID)/credits?api_key=\(MovieDiscoverViewModel.apiKey)&language=en-US")!
+        let url = URL(string: "https://api.themoviedb.org/3/movie/\(movieID)/credits?api_key=\(MovieDiscoverViewModel.apiKey)&language=\(language)")!
         do {
             let (data, _) = try await URLSession.shared.data(from: url)
             let credits = try JSONDecoder().decode(MovieCredits.self, from: data)
@@ -31,7 +49,7 @@ class MovieDetailsViewModel: ObservableObject {
     
     func movieDetails(for movieID: Int) async {
         isLoading = true
-        let url = URL(string: "https://api.themoviedb.org/3/movie/\(movieID)?api_key=\(MovieDiscoverViewModel.apiKey)&language=en-US")!
+        let url = URL(string: "https://api.themoviedb.org/3/movie/\(movieID)?api_key=\(MovieDiscoverViewModel.apiKey)&language=\(language)")!
         do {
             let (data, _) = try await URLSession.shared.data(from: url)
             let details = try JSONDecoder().decode(MovieDetails.self, from: data)
@@ -46,9 +64,9 @@ class MovieDetailsViewModel: ObservableObject {
     func loadCastProfiles() async {
         do {
             for member in cast {
-                let url = URL(string: "https://api.themoviedb.org/3/person/\(member.id)?api_key=\(MovieDiscoverViewModel.apiKey)&language=en-US")!
+                let url = URL(string: "https://api.themoviedb.org/3/person/\(member.id)?api_key=\(MovieDiscoverViewModel.apiKey)&language=\(language)")!
                 let (data, _) = try await URLSession.shared.data(from: url)
-                let profile = try JSONDecoder().decode(CastProfile.self, from: data)
+                let profile = try JSONDecoder().decode(Person.self, from: data)
                 castProfiles.append(profile)
             }
         } catch {
@@ -56,9 +74,26 @@ class MovieDetailsViewModel: ObservableObject {
         }
     }
     
+    func personDetails(for personID: Int) async {
+        isLoading = true
+        let url = URL(string: "https://api.themoviedb.org/3/person/\(personID)?api_key=\(MovieDiscoverViewModel.apiKey)&language=\(language)")!
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            let details = try JSONDecoder().decode(Person.self, from: data)
+            self.personDetails = details
+            isLoading = false
+      
+        } catch {
+            print(error.localizedDescription)
+        }
+    }
+    
+    
+  
+    
 }
 
-struct CastProfile: Decodable, Identifiable {
+/*struct CastProfile: Decodable, Identifiable {
 
     let birthday: String?
     let id: Int
@@ -69,7 +104,7 @@ struct CastProfile: Decodable, Identifiable {
         let baseURL = URL(string: "https://image.tmdb.org/t/p/w200")
         return baseURL?.appending(path: profile_path ?? "")
     }
-}
+}*/
 
 struct MovieCredits: Decodable {
 
